@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Logging config (Logback — Spring Boot's default; no Log4j).
+
+  - Root level is driven by logging.level.root (env LOG_LEVEL_ROOT), default INFO. Per-package
+    levels come from application.yml's logging.level.* on top of this.
+  - Every line carries the requestId from the MDC (see RequestCorrelationFilter) so a single
+    request can be followed across the logs.
+  - dev/local: human-readable console. prod (or the 'json' profile): one JSON object per line to
+    stdout — Render captures stdout and log aggregators can parse the fields.
+-->
+<configuration>
+    <springProperty name="ROOT_LEVEL" source="logging.level.root" defaultValue="INFO"/>
+
+    <!-- Human-readable console for local/dev (any profile that is not prod/json). -->
+    <springProfile name="!prod &amp; !json">
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>%d{HH:mm:ss.SSS} %-5level [%X{requestId:-.......}] %logger{32} : %msg%n</pattern>
+            </encoder>
+        </appender>
+        <root level="${ROOT_LEVEL}">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+    </springProfile>
+
+    <!-- Structured JSON to stdout for production (or an explicit 'json' profile). -->
+    <springProfile name="prod | json">
+        <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+                <!-- MDC (incl. requestId) is included automatically. Keep the service name for
+                     multi-service aggregation. -->
+                <customFields>{"service":"ecoexpress-api"}</customFields>
+            </encoder>
+        </appender>
+        <root level="${ROOT_LEVEL}">
+            <appender-ref ref="JSON"/>
+        </root>
+    </springProfile>
+</configuration>

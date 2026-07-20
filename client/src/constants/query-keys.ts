@@ -1,0 +1,46 @@
+/**
+ * TanStack Query keys, centralised so cache invalidation is consistent. Each key is a factory so
+ * related queries share a stable prefix (e.g. invalidating ['cart'] refetches the cart and its
+ * derived views).
+ */
+export const QUERY_KEYS = {
+  me: ['me'] as const,
+  profile: ['profile'] as const,
+  categories: ['categories'] as const,
+  products: (params?: Record<string, unknown>) => ['products', params ?? {}] as const,
+  product: (slug: string) => ['product', slug] as const,
+  productsByCategory: (slug: string) => ['products', 'category', slug] as const,
+  recommendations: (variantId: string) => ['recommendations', variantId] as const,
+  reviews: (productId: string) => ['reviews', productId] as const,
+  certifications: (slug: string) => ['certifications', slug] as const,
+  productContent: (slug: string) => ['product-content', slug] as const,
+  similarProducts: (slug: string) => ['similar', slug] as const,
+  cart: ['cart'] as const,
+  cartRecommendations: ['cart', 'recommendations'] as const,
+  addresses: ['addresses'] as const,
+  orders: ['orders'] as const,
+  order: (id: string) => ['order', id] as const,
+  banners: (placement: string) => ['banners', placement] as const,
+  publicSettings: ['settings', 'public'] as const,
+  pantry: ['pantry'] as const,
+  aiStatus: ['ai', 'status'] as const,
+  // Admin console
+  adminDashboardSummary: ['admin', 'dashboard', 'summary'] as const,
+  adminTopProducts: (limit: number) => ['admin', 'dashboard', 'top-products', limit] as const,
+  adminProducts: (q: string, page: number) => ['admin', 'products', q, page] as const,
+  adminProductContent: (slug: string) => ['admin', 'product-content', slug] as const,
+  adminOrders: (status: string, page: number) => ['admin', 'orders', status, page] as const,
+  adminOrder: (id: string) => ['admin', 'order', id] as const,
+  adminWarehouses: ['admin', 'warehouses'] as const,
+  adminLowStock: ['admin', 'low-stock'] as const,
+  adminLedgerDrift: ['admin', 'ledger-drift'] as const,
+  adminModerationQueue: (status: string) => ['admin', 'moderation', status] as const,
+  adminCoupons: ['admin', 'coupons'] as const,
+  adminSettings: ['admin', 'settings'] as const,
+  adminAiSpend: ['admin', 'ai-spend'] as const,
+  adminBanners: ['admin', 'banners'] as const,
+  adminVariantSearch: (q: string) => ['admin', 'variant-search', q] as const,
+  adminSuppliers: ['admin', 'suppliers'] as const,
+  adminPurchaseOrders: (status: string, page: number) => ['admin', 'pos', status, page] as const,
+  adminPurchaseOrder: (id: string) => ['admin', 'po', id] as const,
+} as const;

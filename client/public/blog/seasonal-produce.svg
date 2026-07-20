@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675" role="img" aria-label="Eat With the Indian Seasons">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#b45309"/>
+      <stop offset="1" stop-color="#f59e0b"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="675" fill="url(#g)"/>
+  <g fill="none" stroke="#ffffff" stroke-opacity="0.85" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" transform="translate(96 250) scale(3.2)">
+    <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/>
+    <path d="M2 21c0-3 1.85-5.36 5.08-6"/>
+  </g>
+  <text x="96" y="600" font-family="Segoe UI, Arial, sans-serif" font-size="34" font-weight="700" fill="#ffffff" fill-opacity="0.95">Eat With the Indian Seasons</text>
+  <text x="96" y="646" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#ffffff" fill-opacity="0.75">EcoExpress · Organic Living Journal</text>
+</svg>

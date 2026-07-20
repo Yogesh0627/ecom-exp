@@ -1,0 +1,284 @@
+spring:
+  application:
+    name: ecoexpress
+
+  # Google login is on by default now that its client is configured. Override to add prod, e.g.
+  # SPRING_PROFILES_ACTIVE=prod,google-oauth. Drop google-oauth here to disable Google sign-in.
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:google-oauth}
+
+  # Local secrets live in server/.env (gitignored). "optional:" so deployed
+  # environments that inject real env vars boot fine without the file.
+  config:
+    import: optional:file:./.env[.properties]
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/ecoexpress}
+    username: ${DB_USERNAME:ecoexpress}
+    password: ${DB_PASSWORD:}
+    hikari:
+      pool-name: ecoexpress-pool
+      maximum-pool-size: 10
+      minimum-idle: 2
+
+  jpa:
+    # Flyway owns the schema (PRD §12: "Flyway migrations from day one").
+    # Hibernate must never alter it — validate only, so a drift between the
+    # entities and the migrations fails loudly at boot instead of silently
+    # mutating tables.
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          batch_size: 50
+          time_zone: UTC
+        order_inserts: true
+        order_updates: true
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: false
+    locations: classpath:db/migration
+
+  # Default (local dev): in-process cache. Upstash lives in the cloud, so a cache
+  # lookup from a dev laptop costs a network round trip — slower than the Postgres
+  # query it is meant to save. The prod profile below switches to Redis, where the
+  # app sits next to the cache. Service code never names a provider.
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=1000,expireAfterWrite=10m
+
+  jackson:
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+
+  # Product images and certificate PDFs are uploaded via multipart; cap the size (FileController
+  # also enforces 10 MB per file).
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 12MB
+
+  # Spring AI's OpenAI-compatible client, pointed at Gemini's OpenAI surface. The base URL has
+  # no /v1 segment, so completions-path is overridden to Gemini's actual path. Auto-config only
+  # builds the ChatModel when api-key is non-blank, which is exactly the disabled-when-no-key
+  # behaviour we want.
+  ai:
+    openai:
+      api-key: ${GEMINI_API_KEY:}
+      base-url: https://generativelanguage.googleapis.com/v1beta/openai
+      chat:
+        completions-path: /chat/completions
+        options:
+          model: ${ecoexpress.ai.model:gemini-flash-latest}
+    # We do the retry/error handling in AiService, so keep Spring AI's own retry minimal.
+    retry:
+      max-attempts: 2
+
+  # Google OAuth (PRD §13) is declared under the "google-oauth" profile at the bottom
+  # of this file, NOT here. Spring validates every declared registration at startup and
+  # refuses to boot on an empty client-id, so declaring it with a blank default breaks
+  # every environment that has not set up OAuth yet.
+
+server:
+  # PORT is what hosts like Render/Heroku inject; fall back to SERVER_PORT, then 8081 locally
+  # (8080 is taken by the ClaimLens app on the dev machine).
+  port: ${PORT:${SERVER_PORT:8081}}
+  # Behind Render's proxy, honour X-Forwarded-* so redirect URIs (OAuth) use https + the real host.
+  forward-headers-strategy: framework
+  error:
+    include-message: always
+    include-binding-errors: always
+    include-stacktrace: never
+
+ecoexpress:
+  jwt:
+    # Must be >= 32 bytes for HS256. Override in every real environment.
+    secret: ${JWT_SECRET:change-me-in-production-this-is-a-dev-only-secret-key-32b+}
+    access-token-ttl: ${JWT_ACCESS_TTL:PT15M}
+    refresh-token-ttl: ${JWT_REFRESH_TTL:P30D}
+    issuer: ecoexpress
+
+  # AI (Gemini). Locally these are also set in .env; declared here with env defaults so the app
+  # works in a host (Render) that has no .env — only GEMINI_API_KEY needs setting to enable AI.
+  ai:
+    api-key: ${GEMINI_API_KEY:}
+    model: ${AI_MODEL:gemini-flash-latest}
+    monthly-budget-inr: ${AI_MONTHLY_BUDGET_INR:5000}
+
+  # First admin, created on boot only if the email is set and does not already exist.
+  bootstrap:
+    admin-email: ${BOOTSTRAP_ADMIN_EMAIL:}
+    admin-password: ${BOOTSTRAP_ADMIN_PASSWORD:}
+    admin-name: ${BOOTSTRAP_ADMIN_NAME:EcoExpress Admin}
+    # Pre-verified demo customer for the public showcase (one-click "sign in as User"). On by
+    # default so the deployed demo works out of the box; set BOOTSTRAP_DEMO_ENABLED=false for a
+    # private/real deployment. Must match the frontend NEXT_PUBLIC_DEMO_USER_* credentials.
+    demo:
+      enabled: ${BOOTSTRAP_DEMO_ENABLED:true}
+      email: ${BOOTSTRAP_DEMO_EMAIL:demo@ecoexpress.in}
+      password: ${BOOTSTRAP_DEMO_PASSWORD:Demo-User-2026}
+      name: ${BOOTSTRAP_DEMO_NAME:Demo Customer}
+
+  # AI Pantry (PRD §5.5): daily expiry-reminder job. Window matches the storefront's "Use soon"
+  # badge; cron is IST (Asia/Kolkata).
+  pantry:
+    expiry-window-days: ${PANTRY_EXPIRY_WINDOW_DAYS:3}
+    expiry-cron: ${PANTRY_EXPIRY_CRON:0 0 8 * * *}
+
+  # Razorpay. Blank -> payments disabled (checkout returns a clear "not configured").
+  razorpay:
+    key-id: ${RAZORPAY_KEY_ID:}
+    key-secret: ${RAZORPAY_KEY_SECRET:}
+    webhook-secret: ${RAZORPAY_WEBHOOK_SECRET:}
+
+  # CORS: the storefront origin(s) allowed to call the API. Comma-separated in prod, e.g.
+  # CORS_ALLOWED_ORIGINS=https://ecoexpress-web.onrender.com
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
+
+  # Object storage. Default 'local' writes to ./storage and serves via /api/v1/files — zero cloud
+  # setup for dev. Set STORAGE_PROVIDER=s3 with the S3_* vars in prod (Cloudflare R2 or AWS S3).
+  storage:
+    provider: ${STORAGE_PROVIDER:local}
+    local:
+      dir: ${STORAGE_DIR:./storage}
+      public-base-url: ${APP_BASE_URL:http://localhost:8081}
+    s3:
+      endpoint: ${S3_ENDPOINT:}          # R2: https://<account>.r2.cloudflarestorage.com ; AWS: blank
+      region: ${S3_REGION:auto}          # R2: auto ; AWS: e.g. ap-south-1
+      bucket: ${S3_BUCKET:}
+      access-key: ${S3_ACCESS_KEY:}
+      secret-key: ${S3_SECRET_KEY:}
+      public-base-url: ${S3_PUBLIC_URL:}  # R2 public bucket / CDN domain that serves the objects
+
+  # Transactional email via Resend. Blank key -> notifications are recorded in-app but not emailed.
+  email:
+    resend-api-key: ${RESEND_API_KEY:}
+    from: ${EMAIL_FROM:Eco Express <noreply@mail.yogeshchauhan.dev>}
+    verify-url: ${EMAIL_VERIFY_URL:http://localhost:3000/verify-email}
+
+  # Where the OAuth success/failure handlers send the browser after Google sign-in (the storefront).
+  oauth:
+    success-redirect: ${OAUTH_SUCCESS_REDIRECT:http://localhost:3000/auth/callback}
+    failure-redirect: ${OAUTH_FAILURE_REDIRECT:http://localhost:3000/login}
+
+  # Seller identity printed on tax invoices. GSTIN + FSSAI are legally required on an Indian invoice.
+  invoice:
+    seller:
+      name: ${INVOICE_SELLER_NAME:EcoExpress Organics Pvt Ltd}
+      gstin: ${INVOICE_SELLER_GSTIN:}
+      fssai: ${INVOICE_SELLER_FSSAI:}
+      address-line: ${INVOICE_SELLER_ADDRESS:}
+      city: ${INVOICE_SELLER_CITY:Bengaluru}
+      state: ${INVOICE_SELLER_STATE:Karnataka}
+      pincode: ${INVOICE_SELLER_PINCODE:}
+      email: ${INVOICE_SELLER_EMAIL:}
+      phone: ${INVOICE_SELLER_PHONE:}
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+  health:
+    # Local dev caches in-process (Caffeine); the Redis starter is only on the classpath
+    # for the prod profile, where its auto-configured factory would otherwise point at
+    # localhost:6379 and drag overall health to DOWN. The prod profile re-enables this.
+    redis:
+      enabled: false
+
+logging:
+  # Levels are env-tunable so you can raise verbosity for one area in prod without a rebuild.
+  # The console/JSON format and the requestId in every line are configured in logback-spring.xml.
+  level:
+    root: ${LOG_LEVEL_ROOT:INFO}
+    com.ecoexpress: ${LOG_LEVEL:INFO}
+    # Quiet by default; flip to DEBUG/TRACE via env when investigating.
+    org.springframework.web: ${LOG_LEVEL_WEB:WARN}
+    org.springframework.security: ${LOG_LEVEL_SECURITY:WARN}
+    org.hibernate.SQL: ${LOG_LEVEL_SQL:WARN}
+
+---
+# =============================================================================
+# google-oauth — enable Google sign-in (PRD §13).
+# Activate with: SPRING_PROFILES_ACTIVE=google-oauth  (combine: prod,google-oauth)
+#
+# Currently borrowing the Candor app's OAuth client. Two consequences, both verified:
+#   1. Google returns redirect_uri_mismatch for our callback until
+#      http://localhost:8081/login/oauth2/code/google is added to that client's
+#      Authorized redirect URIs in Google Cloud Console.
+#   2. The consent screen shows Candor's app name — it is Candor's OAuth client.
+# Register a dedicated EcoExpress client before launch. See server/.env.
+# =============================================================================
+spring:
+  config:
+    activate:
+      on-profile: google-oauth
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            scope:
+              - email
+              - profile
+            # Explicit, so the URI that must be registered in Google Cloud Console is
+            # stated here rather than left to a framework default.
+            redirect-uri: "{baseUrl}/login/oauth2/code/google"
+
+---
+# =============================================================================
+# prod — Redis (Upstash) replaces Caffeine. Everything else is inherited.
+# Activate with: SPRING_PROFILES_ACTIVE=prod
+# =============================================================================
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  cache:
+    type: redis
+
+management:
+  # Redis is the real cache in prod, so its health matters here (disabled in local dev).
+  health:
+    redis:
+      enabled: true
+
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+      # Upstash accepts the REST token as the RESP password (verified against the
+      # live endpoint — AUTH +OK). No separate Redis password is needed.
+      password: ${REDIS_PASSWORD}
+      # Upstash is TLS-only. Without this the connection is refused.
+      ssl:
+        enabled: true
+      # Cloud round trip: fail fast rather than hanging a request thread. A cache
+      # that is slow to fail is worse than no cache.
+      timeout: 2s
+      connect-timeout: 3s
+      lettuce:
+        pool:
+          enabled: true
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+          max-wait: 2s

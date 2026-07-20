@@ -1,0 +1,79 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Theme tokens as HSL CSS variables (shadcn convention). Primary is an organic green to match the
+ * brand; dark mode overrides the same variables so components never hardcode a color.
+ */
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 150 10% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 150 10% 12%;
+    --primary: 142 55% 34%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 140 30% 96%;
+    --secondary-foreground: 150 10% 20%;
+    --muted: 140 20% 96%;
+    --muted-foreground: 150 6% 45%;
+    --accent: 84 60% 92%;
+    --accent-foreground: 150 10% 20%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    /* Semantic status tokens — the single source for success/warning/info across the app. */
+    --success: 142 60% 34%;
+    --success-foreground: 0 0% 100%;
+    --success-subtle: 142 45% 92%;
+    --warning: 38 92% 45%;
+    --warning-foreground: 0 0% 100%;
+    --warning-subtle: 38 90% 92%;
+    --info: 210 80% 48%;
+    --info-foreground: 0 0% 100%;
+    /* Rating stars — gold, a deliberate cross-theme constant. */
+    --rating: 42 96% 50%;
+    --border: 150 12% 88%;
+    --input: 150 12% 88%;
+    --ring: 142 55% 34%;
+    --radius: 0.6rem;
+  }
+
+  .dark {
+    --background: 150 12% 8%;
+    --foreground: 0 0% 96%;
+    --card: 150 12% 11%;
+    --card-foreground: 0 0% 96%;
+    --primary: 142 50% 45%;
+    --primary-foreground: 150 12% 8%;
+    --secondary: 150 8% 18%;
+    --secondary-foreground: 0 0% 96%;
+    --muted: 150 8% 18%;
+    --muted-foreground: 150 6% 60%;
+    --accent: 150 10% 22%;
+    --accent-foreground: 0 0% 96%;
+    --destructive: 0 62% 45%;
+    --destructive-foreground: 0 0% 96%;
+    --success: 142 50% 45%;
+    --success-foreground: 150 12% 8%;
+    --success-subtle: 142 30% 18%;
+    --warning: 38 80% 52%;
+    --warning-foreground: 150 12% 8%;
+    --warning-subtle: 38 40% 20%;
+    --info: 210 70% 55%;
+    --info-foreground: 150 12% 8%;
+    --rating: 42 96% 55%;
+    --border: 150 8% 22%;
+    --input: 150 8% 22%;
+    --ring: 142 50% 45%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+}
