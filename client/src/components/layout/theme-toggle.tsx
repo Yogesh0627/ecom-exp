@@ -38,15 +38,14 @@ export function ThemeToggle() {
   return (
 
     <Tooltip label={META[current].label}>
-    <Button
-      variant="ghost"
-      size="icon"
-      onClick={() => setTheme(next)}
-      aria-label={`${META[current].label} — switch to ${META[next].label.toLowerCase()}`}
-      // title={META[current].label}
-    >
-      <Icon className="h-5 w-5" />
-    </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => setTheme(next)}
+        aria-label={`${META[current].label} — switch to ${META[next].label.toLowerCase()}`}
+      >
+        <Icon className="h-5 w-5" />
+      </Button>
     </Tooltip>
   );
 }
