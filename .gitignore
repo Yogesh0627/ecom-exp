@@ -40,4 +40,4 @@ npm-debug.log*
 logs/
 
 # Local object storage (dev uploads; prod uses R2)
-storage/
+/server/storage/
