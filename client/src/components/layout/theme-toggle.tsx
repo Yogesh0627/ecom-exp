@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useTheme } from 'next-themes';
 import { Sun, Moon, Monitor } from 'lucide-react';
-import { Button } from '@/components/ui';
+import { Button, Tooltip } from '@/components/ui';
 
 // Cycle order: system → light → dark → system. One click advances one step.
 const ORDER = ['system', 'light', 'dark'] as const;
@@ -36,14 +36,17 @@ export function ThemeToggle() {
   const Icon = META[current].icon;
 
   return (
+
+    <Tooltip label={META[current].label}>
     <Button
       variant="ghost"
       size="icon"
       onClick={() => setTheme(next)}
       aria-label={`${META[current].label} — switch to ${META[next].label.toLowerCase()}`}
-      title={META[current].label}
+      // title={META[current].label}
     >
       <Icon className="h-5 w-5" />
     </Button>
+    </Tooltip>
   );
 }
