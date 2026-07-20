@@ -16,6 +16,11 @@ import {
   CardTitle,
   Input,
   Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   Textarea,
 } from '@/components/ui';
 import { AdminPageHeader, ImageUploader } from '@/components/admin';
@@ -203,20 +208,26 @@ export default function NewProductPage() {
             </div>
             <div>
               <Label htmlFor="p-category">Category</Label>
-              <select
-                id="p-category"
-                value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
-                className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              <Select
+                value={categoryId || 'ALL'}
+                onValueChange={(v) => setCategoryId(v === 'ALL' ? '' : v)}
               >
-                <option value="">— Select —</option>
+                <SelectTrigger
+                  id="p-category"
+                  className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  <SelectValue placeholder="Select" />
+                </SelectTrigger>
+                <SelectContent>
+                <SelectItem value="ALL">— Select —</SelectItem>
                 {flat.map(({ cat, depth }) => (
-                  <option key={cat.id} value={cat.id}>
+                  <SelectItem key={cat.id} value={cat.id}>
                     {' '.repeat(depth * 2)}
                     {cat.name}
-                  </option>
+                  </SelectItem>
                 ))}
-              </select>
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label htmlFor="p-origin">Origin (optional)</Label>
@@ -230,18 +241,21 @@ export default function NewProductPage() {
             </div>
             <div>
               <Label htmlFor="p-gst">GST rate</Label>
-              <select
-                id="p-gst"
-                value={gstRatePct}
-                onChange={(e) => setGstRatePct(e.target.value)}
-                className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-              >
-                {GST_RATES.map((r) => (
-                  <option key={r} value={r}>
-                    {r}%
-                  </option>
-                ))}
-              </select>
+              <Select value={gstRatePct} onValueChange={(v) => setGstRatePct(v)}>
+                <SelectTrigger
+                  id="p-gst"
+                  className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  <SelectValue placeholder="Select" />
+                </SelectTrigger>
+                <SelectContent>
+                  {GST_RATES.map((r) => (
+                    <SelectItem key={r} value={String(r)}>
+                      {r}%
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label htmlFor="p-hsn">HSN code (optional)</Label>

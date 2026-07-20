@@ -1,11 +1,12 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Leaf, ShoppingCart, User, LogOut, CalendarDays, Refrigerator, Camera, LayoutDashboard, BookOpen } from 'lucide-react';
 import { ROUTES, APP_NAME } from '@/constants';
 import { useAuth, useCart } from '@/hooks';
-import { isStaff } from '@/lib';
-import { Button, Badge } from '@/components/ui';
+import { isStaff, cn } from '@/lib';
+import { Button, Badge, Tooltip } from '@/components/ui';
 import { ThemeToggle } from './theme-toggle';
 import { HeaderSearch } from './header-search';
 
@@ -20,8 +21,10 @@ const AI_LINKS = [
 export function SiteHeader() {
   const { isAuthenticated, user, logout } = useAuth();
   const { data: cart } = useCart();
+  const pathname = usePathname();
 
   const itemCount = cart?.totalUnits ?? 0;
+  const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
 
   return (
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
@@ -34,28 +37,41 @@ export function SiteHeader() {
         <HeaderSearch className="ml-2 hidden flex-1 md:block" />
 
         <nav className="hidden items-center gap-1 lg:flex">
-          {AI_LINKS.map((link) => (
-            <Button key={link.href} asChild variant="ghost" size="sm">
-              <Link href={link.href}>
-                <link.icon className="mr-1 h-4 w-4" />
-                {link.label}
-              </Link>
-            </Button>
-          ))}
+          {AI_LINKS.map((link) => {
+            const active = isActive(link.href);
+            return (
+              <Button
+                key={link.href}
+                asChild
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  active && 'bg-primary/10 font-semibold text-primary hover:bg-primary/15 hover:text-primary',
+                )}
+              >
+                <Link href={link.href} aria-current={active ? 'page' : undefined}>
+                  <link.icon className="mr-1 h-4 w-4" />
+                  {link.label}
+                </Link>
+              </Button>
+            );
+          })}
         </nav>
 
         <div className="ml-auto flex items-center gap-1">
           <ThemeToggle />
-          <Button asChild variant="ghost" size="icon" className="relative">
-            <Link href={ROUTES.cart} aria-label="Cart">
-              <ShoppingCart className="h-5 w-5" />
-              {itemCount > 0 && (
-                <Badge className="absolute -right-1 -top-1 h-5 min-w-5 justify-center px-1 text-[10px]">
-                  {itemCount}
-                </Badge>
-              )}
-            </Link>
-          </Button>
+          <Tooltip label="Cart">
+            <Button asChild variant="ghost" size="icon" className="relative">
+              <Link href={ROUTES.cart} aria-label="Cart">
+                <ShoppingCart className="h-5 w-5" />
+                {itemCount > 0 && (
+                  <Badge className="absolute -right-1 -top-1 h-5 min-w-5 justify-center px-1 text-[10px]">
+                    {itemCount}
+                  </Badge>
+                )}
+              </Link>
+            </Button>
+          </Tooltip>
 
           {isAuthenticated ? (
             <>
@@ -73,9 +89,11 @@ export function SiteHeader() {
                   {user?.fullName?.split(' ')[0] ?? 'Account'}
                 </Link>
               </Button>
-              <Button variant="ghost" size="icon" onClick={() => logout()} aria-label="Log out">
-                <LogOut className="h-5 w-5" />
-              </Button>
+              <Tooltip label="Log out">
+                <Button variant="ghost" size="icon" onClick={() => logout()} aria-label="Log out">
+                  <LogOut className="h-5 w-5" />
+                </Button>
+              </Tooltip>
             </>
           ) : (
             <Button asChild size="sm">

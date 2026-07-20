@@ -14,6 +14,11 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
 } from '@/components/ui';
 
 const ADDRESS_TYPES = ['HOME', 'WORK', 'OTHER'];
@@ -114,17 +119,18 @@ export function AddressFormDialog({
           <Field label="Label (optional)" value={form.label ?? ''} onChange={(v) => set('label', v)} placeholder="Home, Work…" />
           <div>
             <Label>Type</Label>
-            <select
-              value={form.type}
-              onChange={(e) => set('type', e.target.value)}
-              className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-            >
-              {ADDRESS_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {t.charAt(0) + t.slice(1).toLowerCase()}
-                </option>
-              ))}
-            </select>
+            <Select value={form.type} onValueChange={(v) => set('type', v)}>
+              <SelectTrigger className="mt-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ADDRESS_TYPES.map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {t.charAt(0) + t.slice(1).toLowerCase()}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <Field label="Recipient name" value={form.recipientName} onChange={(v) => set('recipientName', v)} />
           <Field label="Mobile number" value={form.phone} onChange={(v) => set('phone', v)} />

@@ -25,6 +25,12 @@ import {
   DialogTitle,
   DialogFooter,
   DialogTrigger,
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+  DatePicker,
 } from '@/components/ui';
 import { AdminPageHeader, DataState, statusLabel } from '@/components/admin';
 
@@ -126,17 +132,21 @@ export default function AdminCouponsPage() {
                 </div>
                 <div>
                   <Label className="text-xs">Type</Label>
-                  <select
+                  <Select
                     value={form.type}
-                    onChange={(e) => set({ type: e.target.value as CouponType })}
-                    className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                    onValueChange={(v) => set({ type: v as CouponType })}
                   >
-                    {COUPON_TYPES.map((t) => (
-                      <option key={t} value={t}>
-                        {TYPE_LABEL[t]}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Select…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {COUPON_TYPES.map((t) => (
+                        <SelectItem key={t} value={t}>
+                          {TYPE_LABEL[t]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 {form.type !== 'FREE_SHIPPING' && (
                   <>
@@ -186,19 +196,17 @@ export default function AdminCouponsPage() {
                 </div>
                 <div>
                   <Label className="text-xs">Valid from</Label>
-                  <Input
-                    type="date"
+                  <DatePicker
                     value={form.validFrom}
-                    onChange={(e) => set({ validFrom: e.target.value })}
+                    onChange={(v) => set({ validFrom: v })}
                     className="mt-1"
                   />
                 </div>
                 <div>
                   <Label className="text-xs">Valid until</Label>
-                  <Input
-                    type="date"
+                  <DatePicker
                     value={form.validUntil}
-                    onChange={(e) => set({ validUntil: e.target.value })}
+                    onChange={(v) => set({ validUntil: v })}
                     className="mt-1"
                   />
                 </div>

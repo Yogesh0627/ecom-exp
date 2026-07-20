@@ -4,7 +4,7 @@ import { useState, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
 import { AuthProvider } from '@/hooks';
-import { Toaster } from '@/components/ui';
+import { Toaster, TooltipProvider } from '@/components/ui';
 
 /**
  * Client-side providers, mounted once at the root. QueryClient is created in state so it is stable
@@ -29,8 +29,10 @@ export function Providers({ children }: { children: ReactNode }) {
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          {children}
-          <Toaster />
+          <TooltipProvider delayDuration={200}>
+            {children}
+            <Toaster />
+          </TooltipProvider>
         </AuthProvider>
       </QueryClientProvider>
     </ThemeProvider>

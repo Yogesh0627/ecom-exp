@@ -977,10 +977,14 @@ Recently closed (were on this list):
   horizontally — noted inline.)
 - **Remaining modules** — purchase orders, coupons, reviews, wishlist, notifications, banners,
   admin analytics, and the five AI features (which need a Gemini key).
-- **Frontend** — the PRD specifies Next.js App Router; the current `client/` is a Vite starter
-  and needs a rebuild.
+- **Frontend** — ~~Vite starter, needs a rebuild~~ **DONE**: rebuilt as a full Next.js 14 App Router
+  app (TypeScript + Tailwind + shadcn), deployed to Vercel. See Part II §12.
 - **Razorpay credentials** — the entire webhook/idempotency path is built and tested with a dummy
-  secret; live keys plug in when ready.
+  secret; live keys plug in when ready. (Test keys now live; the checkout shows the test-card so a
+  reviewer can complete a transaction — Part II §16.)
+
+> **Note:** several items in this section were closed after Part I was written — see **Part II**
+> below for the frontend, AI hardening, observability, and the live Render + Vercel deployment.
 
 ---
 
@@ -989,3 +993,327 @@ this log: Auth 14/14, Catalog 20/20, Inventory 13/13, Cart 20/20, Orders 26/26, 
 GST admin + scheduler 7/7, Inventory admin (PO/adjustments/alerts) 16/16, Reviews + Wishlist 18/18,
 Coupons 15/15, AI recs+pantry 18/18, AI meal-planner+fridge (live Gemini) 13/13, Engagement/admin
 20/20 — 214 end-to-end assertions, all green.*
+
+---
+---
+
+# Part II — Full build, frontend, AI hardening & the deployment (the parts Part I predates)
+
+> Part I above was written mid-build and is backend-heavy; a couple of its "not done yet" items are
+> now done. **The frontend is no longer a Vite starter — it is a complete Next.js 14 App Router app,
+> deployed.** Google OAuth has a dedicated client. This part covers everything since: the frontend,
+> the AI robustness/cost work, observability, the live deployment (Render + Vercel), the new feature
+> areas, and eleven more war stories — most of them from actually shipping it to production.
+
+## 12. The frontend (Next.js 14 App Router) — be ready for this
+
+The app is now **Next.js 14 (App Router) + TypeScript + Tailwind + shadcn/ui**, layered exactly like
+the backend: `lib` (axios instance, dayjs, formatters) → `api` (typed endpoint modules) → `types`
+(mirror the backend DTOs) → `hooks` (TanStack Query wrappers) → `components`/`app`. One configured
+axios instance carries the JWT and transparently refreshes on 401; one dayjs instance with plugins.
+
+**Q: Server vs client components — how did you split them?**
+Client components for anything interactive/stateful (cart, forms, the AI feature pages) — they use
+hooks and TanStack Query. Server components for SEO metadata: each dynamic route has a server
+`layout.tsx` that exports `generateMetadata()` (title, canonical, OpenGraph, JSON-LD Product/Article
+schema) wrapping the client page. That gives real crawlable metadata without turning the whole page
+into an RSC.
+
+**Q: How is data fetching and cache handled on the client?**
+TanStack Query v5 — every read is a `useQuery` keyed in a central `QUERY_KEYS`, every write a
+`useMutation` that invalidates the affected keys. staleTime 30s, retry 1, no refetch-on-focus. This
+gives request dedup, background refresh, and optimistic-feeling UX without a global store like Redux.
+
+**Q: NEXT_PUBLIC_* — what bit you?**
+They are **inlined at build time**, not read at runtime. So the API URL and site URL must be present
+during `next build`, not just in the running container. On a Docker build (Render) that means
+declaring each one as a build `ARG` + `ENV` before `npm run build`; env vars set only at runtime
+never reach the bundle. This caused a real production build crash (War Story 26).
+
+**Q: How did you do SEO on an SPA-ish app?**
+Next Metadata API in server layouts: dynamic `sitemap.ts` (fetches categories + products), `robots.ts`,
+`manifest.ts`, `opengraph-image.tsx` via `next/og`, and JSON-LD structured data. `react cache()` dedupes
+the product fetch shared between `generateMetadata` and the page.
+
+**Q: Component library — did you hand-roll UI?**
+shadcn/ui (Radix primitives + Tailwind, copied into the repo, not a dependency you can't edit). I
+built Button/Card/Dialog/Input/Table/Toast early, and later added Select, Tooltip, Popover, Calendar
++ a composed DatePicker, Pagination, and Breadcrumbs. Theme is CSS variables (HSL) with a `.dark`
+class, driven by `next-themes` (system/light/dark). Everything is theme-aware.
+
+**Q: Dark mode without a flash of the wrong theme?**
+`next-themes` with `attribute="class"`, `defaultTheme="system"`, and `suppressHydrationWarning` on
+`<html>`. It injects a tiny pre-hydration script that sets the class before first paint.
+
+**Q: How does the storefront tell the user the backend is waking up?**
+A `ServerWakeBanner` polls a public, dependency-free `/api/v1/ready` endpoint; if the first check
+takes >1.2s it shows a red pulsing dot → green when ready. Free-tier hosts sleep and cold-start ~50s,
+so this turns "the site is broken" into "the site is waking up." `/ready` is separate from
+`/actuator/health` (which Render uses and which also checks the DB).
+
+## 13. AI: robustness and cost control (the hard part of "add AI")
+
+The AI sits behind an `AiClient` interface (Gemini via the OpenAI-compatibility surface, no SDK) and
+an `AiService` wrapper that meters every call — tokens in/out, latency, estimated INR cost — into an
+append-only `ai_request_logs` table, and **fails closed against a monthly budget**. AI is config, not
+code: no key → the feature is cleanly disabled, never a 500.
+
+**Q: LLMs return unreliable JSON. How did you make features depend on it safely?**
+Three layers. (1) The prompt is **grounded in real data** and asks for strict JSON. (2) A shared
+`LenientJson` utility strips markdown fences/prose, and — the key part — **repairs truncated replies**
+by balancing unclosed strings/brackets (Gemini truncates under load; the data is all there, only the
+closers are cut), then parses with a lenient reader that tolerates trailing commas. (3) A bounded
+retry. So a truncated recipe still parses instead of 503ing.
+
+**Q: How do you stop AI from recommending or "adding to cart" something you don't sell?**
+Structurally: the AI never names products. Recommendations are a **DB query first** (same category,
+active, in stock) — the AI, when used, only *re-ranks a candidate set we hand it*, and any ID it
+returns is validated against that set. For "turn my cart into a meal," the AI invents a *recipe*
+(safe general knowledge), then each ingredient is matched to a **real in-stock SKU**; anything we
+can't match is shown as a plain "you'll also need…" note, never a fake add button.
+
+**Q: How do you keep AI content factually safe and legally OK?**
+Product content is AI-**drafted, human-approved**: the model writes a `DRAFT` no shopper sees; an
+admin reviews and publishes. The prompt forbids disease-cure/prevention claims (FSSAI/ASCI) and
+fabricated nutrition numbers; the "disease prevention" ask is stored under the compliance-safe name
+`nutrient_support`, with a "general nutritional information, not medical advice" disclaimer.
+
+**Q: The AI key hit its quota in production — what did you do?**
+The (borrowed) Gemini free tier is 20 requests/day; testing exhausted it. So I made the limit
+**visible**: the client detects rate-limit/quota errors (429/RESOURCE_EXHAUSTED), records a cooldown
+in an in-memory `AiStatusService`, and exposes a public `GET /ai/status`. The storefront polls it and
+shows an "AI features are busy, try again in ~Ns" banner instead of a cryptic failure, and disables
+the AI buttons. Verified end-to-end. Real fix for launch: a billing-enabled key.
+
+## 14. Observability — logging done deliberately
+
+**Q: What logging framework, and why not Log4j?**
+SLF4J + **Logback** (Spring Boot's default; `@Slf4j` in ~40 classes). Deliberately not Log4j — 1.x is
+EOL/insecure and 2.x is a pointless lateral move. Logs go to **stdout only** — correct for a PaaS
+(Render captures stdout; the filesystem is ephemeral). Never file logging.
+
+**Q: How do you trace one request across the logs?**
+A `RequestCorrelationFilter` (runs first) stamps each request with a correlation id in the **MDC** and
+echoes it on the `X-Request-Id` response header. Every log line during that request carries it —
+*including third-party (Netty/Spring AI) logs* — so one request is followable end-to-end. Levels are
+env-tunable per package; production emits **one JSON object per line** (logstash encoder) under the
+`prod`/`json` profile so an aggregator can parse fields, while dev stays human-readable.
+
+## 15. Account self-service, recommendations, cart intelligence (feature deep-dives)
+
+**Q: How does "change my email" work safely?**
+**Verify-before-switch.** The new address is staged in `users.pending_email` and a verification token
+carrying the new email is sent *to the new address*. The current email stays active until the link is
+clicked; consuming the token swaps `email` and clears the pending value. This prevents both typo
+lockout and hijacking (you can't move an email you can't receive). Same token table as first-time
+verification, distinguished by a nullable `new_email` column.
+
+**Q: Multiple addresses + a default — any subtlety?**
+`addresses_one_default_per_user` is a partial unique index, so setting a new default must clear the
+old first. The clear query has `@Modifying(clearAutomatically=true)`, which **detaches** the loaded
+entity — so a naive `setDefault(true)` afterward is silently lost (War Story 30). Fix: `save()` to
+re-merge. Deleting the default promotes the most-recent remaining address.
+
+**Q: My Orders with tabs — how are the buckets defined server-side?**
+`GET /orders?bucket=all|active|delivered|cancelled` maps each bucket to a set of statuses
+(active = PENDING_PAYMENT…OUT_FOR_DELIVERY, cancelled = CANCELLED/RETURNED/REFUNDED) and returns a
+proper `PageResponse` (the customer endpoint previously flattened to a bare list, discarding paging).
+
+**Q: Pantry expiry reminders — cron or event?**
+A Spring `@Scheduled` cron job (daily 08:00 IST, window + cron env-tunable) finds items expiring
+within N days that haven't been reminded, groups by user, and sends **one summary as both an in-app
+notification and a Resend email** (`PANTRY_EXPIRY` added to the emailed types), then stamps
+`expiry_notified_at` so nobody is nagged twice. Caveat I volunteer: on a free host that sleeps, the
+cron won't fire unless the service is kept awake — real production wants a keep-alive ping or an
+external scheduler, and multi-instance needs ShedLock.
+
+**Q: Pantry also auto-fills on delivery — how, without breaking delivery?**
+The order's DELIVERED transition calls a pantry service in its **own** transaction (REQUIRES_NEW),
+idempotent per order — so auto-stocking can never fail or roll back the delivery that triggered it.
+
+## 16. Deployment — Render + Vercel (the saga, and what it teaches)
+
+**Q: Where does it run and why the split?**
+**Backend (Spring Boot) → Render** (Docker, `eclipse-temurin:21`), against a hosted **Neon** Postgres.
+**Frontend (Next.js) → Vercel.** Vercel is built by the Next team — native Next builds, a global CDN,
+and no cold-start sleep on the frontend (vs Render free-tier's ~50s nap). Spring Boot can't run on
+Vercel, so the clean split is front-on-Vercel / API-on-Render — a common, deliberate architecture.
+
+**Q: Config that crosses the two services?**
+Backend `CORS_ALLOWED_ORIGINS` = the exact Vercel origin **with no trailing slash** (Spring matches
+the `Origin` header exactly), OAuth success/failure redirects → the Vercel URL, and the Google OAuth
+**callback stays the API URL** (the callback hits the backend). Frontend `NEXT_PUBLIC_API_BASE_URL` =
+the API URL **+ /api/v1**, baked at build time.
+
+**Q: Migrations and seed data on a fresh prod DB?**
+Flyway runs all migrations on first boot (validated against Neon PG18 — a harmless "newer than
+tested" warning). The bootstrap admin + a pre-verified demo customer are seeded by startup runners
+(deliberately not Flyway — a committed password hash is forever and un-rotatable). The catalog is
+**not** in migrations, so I seeded Neon via the admin API so the deployed store isn't empty.
+
+**Q: Neon connection string gotchas?**
+Three: use the **direct** endpoint, not the `-pooler` (pgjdbc has its own pool; Neon's PgBouncer
+breaks prepared statements); **drop `channel_binding=require`** (a libpq option pgjdbc rejects); add
+the `jdbc:` prefix. (War Story 31.)
+
+## 17. War stories, continued — the shipping-to-production phase
+
+> These are the ones that only appear when you actually deploy. Interviewers love them because the
+> root cause is usually subtle and "it worked on my machine" is literally true.
+
+### War Story 24 — the `.gitignore` that hid source code from the build (my favourite of this phase)
+The Render build failed: `package com.ecoexpress.common.storage does not exist`. The app compiled and
+ran **locally**. Root cause: `.gitignore` had a bare `storage/` (to skip the local uploads dir) — and
+gitignore matches a folder of that name **anywhere in the tree**, so it also silently excluded the
+**source package** `common/storage`. Git never pushed those 5 files; the cloud build had no
+`StorageService`. Two lessons: (1) an ignore pattern for a runtime dir must be **anchored**
+(`/server/storage/`), not a bare name; (2) "compiles locally" proves nothing about the repo — the CI
+builds from *what git tracked*. Fix: anchor the pattern + `git add -f` the package (and note: once a
+file is tracked, `.gitignore` no longer affects it). The exact same class of bug had also broken a
+transfer zip I built with `robocopy /XD storage`.
+
+### War Story 25 — building on a JDK newer than the toolchain supported
+On a machine with **JDK 24**, compilation died with `com.sun.tools.javac.code.TypeTag :: UNKNOWN` —
+Lombok 1.18.34 reaching into javac internals that changed in JDK 24. The project targets Java 21.
+Two correct answers: use JDK 21 (matches the Render runtime), or bump Lombok to 1.18.38 (supports
+JDK 24, still fine on 21). Kept `<java.version>21`, because a JDK-24 machine still compiles *to* Java
+21 bytecode that runs on Render's JDK 21 — but compiling *to* 24 would produce class files the JDK-21
+runtime can't load. The Netty `sun.misc.Unsafe` warnings on JDK 24 are cosmetic. Lesson: your
+machine's JDK and the project's bytecode target are two different things; keep the target = prod.
+
+### War Story 26 — the empty string that crashed the production build
+The Next build crashed collecting `/_not-found`: `TypeError: Invalid URL, input: ''`. Cause:
+`metadataBase: new URL(SITE_URL)` where `SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? default` —
+and `??` only falls back on `null`/`undefined`, **not** on an empty string. An unset Docker build ARG
+passes `""`, which stayed `""`, and `new URL('')` throws. Fix: `||` instead of `??` (so empty falls
+back too) *and* actually set the env var. Lesson: `??` vs `||` matters the moment "unset" can mean
+"empty string," which is exactly what build-arg env vars do.
+
+### War Story 27 — Radix Select forbids an empty value
+Migrating native `<select>` to shadcn/Radix `Select`, several were filters with `<option value="">All</option>`.
+Radix **throws at runtime** on `<SelectItem value="">`. Fix pattern: a sentinel — `value={x || 'ALL'}`
+and `onValueChange={v => setX(v === 'ALL' ? '' : v)}` — so the UI has a non-empty value but the state
+stays `""`. Applied in 5 filter/parent selects. Lesson: component-library migrations have invariants
+the native element didn't; verify by grepping for the forbidden shape, because it's a runtime crash,
+not a type error.
+
+### War Story 28 — Gemini truncated its JSON under load
+Recipe suggestion started returning "malformed suggestion" 503s intermittently. The logged raw output
+showed a JSON object cut off mid-array — **truncated**, not garbage. And the real reason it kept
+failing that day: the free-tier key had hit **20 requests/day**. Two fixes: salvage truncated JSON by
+balancing brackets (War Story shared as the `LenientJson` util), and make quota **visible** via
+`/ai/status` + a UI banner. Lesson: LLM output isn't just "sometimes wrong JSON," it's "sometimes
+*incomplete* JSON," and free-tier quotas are a production constraint you must design around.
+
+### War Story 29 — the unique index + Hibernate's insert-before-delete ordering
+Replacing a product's images (clear old, add new) failed with
+`duplicate key ... product_images_one_primary`. The index enforces one primary image per variant.
+Hibernate, in a single flush, **inserts the new primary before deleting the old one**, so both are
+primary momentarily → violation. Fix: `entityManager.flush()` after `clear()` (executes the deletes)
+and before adding the new rows. Lesson: `orphanRemoval` + a unique constraint on the same rows needs
+an explicit flush boundary, or you fight Hibernate's action ordering.
+
+### War Story 30 — `clearAutomatically = true` silently detached my entity
+"Set as default address" returned 200 but the default didn't change. `clearDefaultForUser` is a
+`@Modifying(clearAutomatically = true)` bulk update — it clears the persistence context, **detaching**
+the entity I'd loaded. The subsequent `address.setIsDefault(true)` was on a detached object and never
+flushed. Fix: `save()` to re-merge. Lesson: `clearAutomatically` after a bulk update detaches
+everything loaded before it; anything you mutate afterward must be re-saved.
+
+### War Story 31 — the Neon connection string pgjdbc couldn't speak
+The first deploy DB config failed to connect. Neon's `postgresql://` string uses the **pooler**
+endpoint and `channel_binding=require` — both are libpq/PgBouncer features the JDBC driver either
+breaks on (pooler + prepared statements) or rejects (`channel_binding`). Fix: direct endpoint (drop
+`-pooler`), drop `channel_binding`, add `jdbc:` prefix. Lesson: a provider's copy-paste connection
+string is tuned for *their* default client, not necessarily yours.
+
+### War Story 32 — the transparent dropdown (a CSS variable the theme never defined)
+The search suggestions dropdown rendered on a transparent background. `bg-popover` resolved to
+nothing because the theme defined `--card` etc. but **never `--popover`** — shadcn components assume
+it. Fix: add `--popover`/`--popover-foreground` (light + dark) + the Tailwind color. Lesson: an
+undefined design token doesn't error, it just silently produces `background: ` (nothing) — audit that
+the tokens your components reference actually exist.
+
+### War Story 33 — "why is health behind auth?" (it must not be)
+A reasonable-sounding question during deploy: should the health check require authentication? No — a
+health endpoint **must** be public, or the platform's probe gets a 401, decides the service is
+unhealthy, and never routes traffic (or restarts it forever). `/actuator/health` is explicitly
+`permitAll`. Lesson: liveness/readiness probes are infrastructure, not user endpoints — gating them
+behind auth is self-defeating.
+
+### War Story 34 — the IDE "cannot find symbol" that Maven disagreed with
+Right after the storage-package fix, VS Code showed `cannot find symbol StorageService` while
+`mvn compile` was clean and the app was running. The redhat.java language server keeps its own
+incremental-compile state that drifts after Maven rebuilds. Trust the build (javac/Maven) over the
+IDE's in-memory analysis; fix with "Java: Clean Java Language Server Workspace." (Same family as War
+Story 15's ghost `.class`, but the opposite direction — IDE wrong, build right.)
+
+## 18. Frontend / product interview questions (rapid-fire)
+
+**Q: Why TanStack Query over Redux?** The app's state is mostly *server* state (cart, orders,
+catalog). Query gives caching, dedup, background refresh, and invalidation for free; Redux would be
+boilerplate to re-implement that. Genuine client-only state (a form, a modal) is local `useState`.
+
+**Q: How does the axios instance handle expiry?** One instance with a request interceptor that
+attaches the access token and a response interceptor that, on 401, tries the refresh token once,
+retries the original request, and bounces to login if refresh fails.
+
+**Q: Search-as-you-type — how?** Debounced (300ms) query in the header drives a dropdown of the top 6
+matches; ↑/↓/Enter/Esc keyboard nav; click-outside closes. Backend search adds a substring (ILIKE)
+fallback to the full-text match so partial words ("tom" → "Tomato") work — full-text alone is
+whole-word.
+
+**Q: How are product images served in prod without object storage on the critical path?** The seeded
+catalog uses self-contained SVGs in the frontend's `public/` (static, on the CDN) — no R2 dependency
+to render the demo. Real uploaded images/certs go to R2 behind the `StorageService` interface.
+
+**Q: Demo login for recruiters — and the risk?** One-click "As Admin"/"As User" on the login page.
+The honest risk I raise unprompted: "As Admin" grants full admin on a public URL and bakes the admin
+password into the client bundle — fine for a showcase, must be gated off before real customer data.
+
+## 19. Behavioral & meta questions (have real answers)
+
+**Q: Tell me about the hardest bug.** Pick one with a subtle root cause and a clear lesson — the
+webhook signature-before-idempotency security hole (War Story 14), or the `.gitignore` hiding source
+from the build (War Story 24). Both show you reason about *why*, not just patch symptoms.
+
+**Q: A time "it worked on my machine."** War Story 24 verbatim — local compiled, CI didn't, because
+git tracked a different set of files than my disk had. The fix taught me to think about the repo as
+the source of truth, not the working directory.
+
+**Q: How do you decide build vs buy / your own vs a library?** Provider-behind-an-interface
+(`AiClient`, `StorageService`, `EmailSender`): I own the seam, the provider is config. I didn't pull
+SDKs where a thin HTTP client sufficed (Razorpay, Resend, Gemini) — fewer transitive deps, full
+control of the failure shape.
+
+**Q: What would you do differently / what's the tech debt?** Multi-warehouse routing (first-warehouse
+today), the AI matcher is substring not embeddings, tests aren't in CI, and the demo shares borrowed
+keys (Gemini/Resend/R2/OAuth) that need dedicated accounts before launch. Stating these precisely is
+the signal.
+
+**Q: How did you keep quality without a big team?** `ddl-auto: validate` catches schema drift at boot;
+end-to-end tests drive real HTTP against a real DB (not mocks) and *adversarially check the
+consequence*, not the happy path — that's what caught the two security bugs. And a running "war stories"
+log so a lesson is learned once.
+
+## 20. System design — "how would you scale this?" (extended)
+
+- **Frontend already scales** — static/SSG on Vercel's CDN; the API is the stateful tier.
+- **Stateless API** — JWTs mean any instance serves any request; scale horizontally behind a load
+  balancer. Move caching from Caffeine (in-process) to Redis (already abstracted; the `prod` profile
+  switches it) so instances share a cache.
+- **The scheduled jobs are the catch** — `@Scheduled` fires on *every* instance; before scaling past
+  one, put them behind ShedLock or move them to a dedicated scheduler / external cron.
+- **Payments already assume concurrency** — DB unique constraint on `(gateway, event_id)` for webhook
+  idempotency, `SELECT … FOR UPDATE` on stock. Those don't change when you add instances.
+- **AI cost is the real scaling axis** — the per-call metering + monthly budget + `/ai/status`
+  cooldown already exist; at scale you'd add per-user rate limits and cache identical prompts.
+- **Read scale** — the product page is cached and eviction is coarse; a CDN/edge cache in front of
+  read endpoints and a read replica for Postgres are the next steps.
+
+---
+
+*Part II covers the frontend, AI hardening, observability, the Render+Vercel deployment, and War
+Stories 24–34 (the shipping phase). Backend behaviours remain as verified in Part I; the frontend
+typechecks clean and every storefront + admin route renders. Live: backend on Render, frontend on
+Vercel.*

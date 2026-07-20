@@ -18,6 +18,11 @@ import {
   DialogTitle,
   DialogFooter,
   DialogTrigger,
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
 } from '@/components/ui';
 import { AdminPageHeader, DataState } from '@/components/admin';
 
@@ -130,20 +135,23 @@ export default function AdminCategoriesPage() {
                 </div>
                 <div>
                   <Label htmlFor="cat-parent">Parent (optional)</Label>
-                  <select
-                    id="cat-parent"
-                    value={parentId}
-                    onChange={(e) => setParentId(e.target.value)}
-                    className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  <Select
+                    value={parentId || 'ALL'}
+                    onValueChange={(v) => setParentId(v === 'ALL' ? '' : v)}
                   >
-                    <option value="">— None (top level) —</option>
-                    {flat.map(({ cat, depth }) => (
-                      <option key={cat.id} value={cat.id}>
+                    <SelectTrigger id="cat-parent" className="mt-1">
+                      <SelectValue placeholder="Select…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ALL">— None (top level) —</SelectItem>
+                      {flat.map(({ cat, depth }) => (
+                        <SelectItem key={cat.id} value={cat.id}>
                         {' '.repeat(depth * 2)}
                         {cat.name}
-                      </option>
-                    ))}
-                  </select>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <Label htmlFor="cat-desc">Description (optional)</Label>

@@ -19,6 +19,12 @@ import {
   DialogTitle,
   DialogFooter,
   DialogTrigger,
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+  DatePicker,
 } from '@/components/ui';
 import { AdminPageHeader, DataState, statusLabel } from '@/components/admin';
 
@@ -114,17 +120,21 @@ export default function AdminBannersPage() {
                 </div>
                 <div>
                   <Label className="text-xs">Placement</Label>
-                  <select
+                  <Select
                     value={form.placement}
-                    onChange={(e) => set({ placement: e.target.value as BannerPlacement })}
-                    className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                    onValueChange={(v) => set({ placement: v as BannerPlacement })}
                   >
-                    {BANNER_PLACEMENTS.map((p) => (
-                      <option key={p} value={p}>
-                        {statusLabel(p)}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Select…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {BANNER_PLACEMENTS.map((p) => (
+                        <SelectItem key={p} value={p}>
+                          {statusLabel(p)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <Label className="text-xs">Position</Label>
@@ -132,11 +142,11 @@ export default function AdminBannersPage() {
                 </div>
                 <div>
                   <Label className="text-xs">Active from (optional)</Label>
-                  <Input type="date" value={form.activeFrom} onChange={(e) => set({ activeFrom: e.target.value })} className="mt-1" />
+                  <DatePicker value={form.activeFrom} onChange={(v) => set({ activeFrom: v })} className="mt-1" />
                 </div>
                 <div>
                   <Label className="text-xs">Active until (optional)</Label>
-                  <Input type="date" value={form.activeUntil} onChange={(e) => set({ activeUntil: e.target.value })} className="mt-1" />
+                  <DatePicker value={form.activeUntil} onChange={(v) => set({ activeUntil: v })} className="mt-1" />
                 </div>
               </div>
               <DialogFooter>

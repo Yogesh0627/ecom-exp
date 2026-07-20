@@ -12,6 +12,8 @@
     --foreground: 150 10% 12%;
     --card: 0 0% 100%;
     --card-foreground: 150 10% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 150 10% 12%;
     --primary: 142 55% 34%;
     --primary-foreground: 0 0% 100%;
     --secondary: 140 30% 96%;
@@ -44,6 +46,8 @@
     --foreground: 0 0% 96%;
     --card: 150 12% 11%;
     --card-foreground: 0 0% 96%;
+    --popover: 150 12% 11%;
+    --popover-foreground: 0 0% 96%;
     --primary: 142 50% 45%;
     --primary-foreground: 150 12% 8%;
     --secondary: 150 8% 18%;

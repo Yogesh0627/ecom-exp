@@ -20,3 +20,17 @@ export {
   DialogTitle,
   DialogDescription,
 } from './dialog';
+export { Tooltip, TooltipProvider } from './tooltip';
+export {
+  Select,
+  SelectGroup,
+  SelectValue,
+  SelectTrigger,
+  SelectContent,
+  SelectLabel,
+  SelectItem,
+  SelectSeparator,
+} from './select';
+export { Popover, PopoverTrigger, PopoverContent } from './popover';
+export { Calendar } from './calendar';
+export { DatePicker } from './date-picker';

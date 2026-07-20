@@ -1,6 +1,8 @@
-/** Runtime config sourced from the environment. */
+/** Runtime config sourced from the environment.
+ *  Use `||` (not `??`) so an EMPTY env var (e.g. an unset Docker build ARG passes "") falls back to
+ *  the default instead of becoming "" — an empty URL would crash `new URL(...)` at build time. */
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8081/api/v1';
+  process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8081/api/v1';
 
 /** Backend origin (without the /api/v1 prefix) — the OAuth entry point lives at the root. */
 export const API_ORIGIN = API_BASE_URL.replace(/\/api\/v1\/?$/, '');
@@ -13,8 +15,9 @@ export const APP_TAGLINE = 'AI-powered organic groceries for India';
 export const APP_DESCRIPTION =
   'Shop certified-organic groceries with AI nutrition scoring, a weekly meal planner, and a smart fridge scanner — fresh produce delivered across India.';
 
-/** Public site URL, used for canonical/OG/sitemap. Override per environment. */
-export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000').replace(
+/** Public site URL, used for canonical/OG/sitemap. Override per environment.
+ *  `||` (not `??`) so an empty env var falls back rather than yielding "" (which breaks new URL()). */
+export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000').replace(
   /\/$/,
   '',
 );

@@ -6,7 +6,23 @@ import { Refrigerator, Plus, Check, Trash2, AlertTriangle } from 'lucide-react';
 import { ROUTES } from '@/constants';
 import { dayjs } from '@/lib';
 import { usePantry, usePantryMutations, useAuth } from '@/hooks';
-import { Button, Card, CardContent, CardHeader, CardTitle, Input, Label, Badge, Skeleton } from '@/components/ui';
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Input,
+  Label,
+  Badge,
+  Skeleton,
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+  DatePicker,
+} from '@/components/ui';
 import { AiStatusBanner } from '@/components/system/ai-status-banner';
 import type { PantryUnit } from '@/types';
 
@@ -76,21 +92,22 @@ export default function PantryPage() {
             </div>
             <div className="sm:col-span-2">
               <Label className="text-xs">Unit</Label>
-              <select
-                value={unit}
-                onChange={(e) => setUnit(e.target.value as PantryUnit)}
-                className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-              >
-                {UNITS.map((u) => (
-                  <option key={u} value={u}>
-                    {u}
-                  </option>
-                ))}
-              </select>
+              <Select value={unit} onValueChange={(v) => setUnit(v as PantryUnit)}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {UNITS.map((u) => (
+                    <SelectItem key={u} value={u}>
+                      {u}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="sm:col-span-3">
               <Label className="text-xs">Expiry (optional)</Label>
-              <Input value={expiry} onChange={(e) => setExpiry(e.target.value)} type="date" className="mt-1" />
+              <DatePicker value={expiry} onChange={setExpiry} placeholder="Pick a date" className="mt-1" />
             </div>
           </div>
           <Button onClick={onAdd} disabled={add.isPending || !name.trim()} className="mt-4">

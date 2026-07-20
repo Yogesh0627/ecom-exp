@@ -29,6 +29,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  DatePicker,
 } from '@/components/ui';
 import { AdminPageHeader, DataState, statusLabel } from '@/components/admin';
 
@@ -213,10 +214,9 @@ export default function AdminPurchaseOrderDetailPage() {
                           </div>
                           <div>
                             <Label className="text-xs">Expiry</Label>
-                            <Input
-                              type="date"
+                            <DatePicker
                               value={receipts[l.poItemId]?.expiryDate ?? ''}
-                              onChange={(e) => setReceipt(l.poItemId, { expiryDate: e.target.value })}
+                              onChange={(v) => setReceipt(l.poItemId, { expiryDate: v })}
                               className="mt-1"
                             />
                           </div>

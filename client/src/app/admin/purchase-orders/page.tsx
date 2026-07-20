@@ -33,6 +33,12 @@ import {
   DialogTitle,
   DialogFooter,
   DialogTrigger,
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+  DatePicker,
 } from '@/components/ui';
 import { AdminPageHeader, DataState, statusLabel, VariantPicker } from '@/components/admin';
 
@@ -141,37 +147,45 @@ export default function AdminPurchaseOrdersPage() {
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <Label className="text-xs">Supplier</Label>
-                      <select
-                        value={supplierId}
-                        onChange={(e) => setSupplierId(e.target.value)}
-                        className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                      <Select
+                        value={supplierId || 'ALL'}
+                        onValueChange={(v) => setSupplierId(v === 'ALL' ? '' : v)}
                       >
-                        <option value="">— Select —</option>
-                        {(suppliers ?? []).map((s) => (
-                          <option key={s.id} value={s.id}>
-                            {s.name}
-                          </option>
-                        ))}
-                      </select>
+                        <SelectTrigger className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
+                          <SelectValue placeholder="— Select —" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ALL">— Select —</SelectItem>
+                          {(suppliers ?? []).map((s) => (
+                            <SelectItem key={s.id} value={s.id}>
+                              {s.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div>
                       <Label className="text-xs">Warehouse</Label>
-                      <select
-                        value={warehouseId}
-                        onChange={(e) => setWarehouseId(e.target.value)}
-                        className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                      <Select
+                        value={warehouseId || 'ALL'}
+                        onValueChange={(v) => setWarehouseId(v === 'ALL' ? '' : v)}
                       >
-                        <option value="">— Select —</option>
-                        {(warehouses ?? []).map((w) => (
-                          <option key={w.id} value={w.id}>
-                            {w.code}
-                          </option>
-                        ))}
-                      </select>
+                        <SelectTrigger className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
+                          <SelectValue placeholder="— Select —" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ALL">— Select —</SelectItem>
+                          {(warehouses ?? []).map((w) => (
+                            <SelectItem key={w.id} value={w.id}>
+                              {w.code}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="col-span-2">
                       <Label className="text-xs">Expected delivery (optional)</Label>
-                      <Input type="date" value={expectedAt} onChange={(e) => setExpectedAt(e.target.value)} className="mt-1" />
+                      <DatePicker value={expectedAt} onChange={setExpectedAt} className="mt-1" />
                     </div>
                   </div>
 

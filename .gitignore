@@ -39,5 +39,7 @@ desktop.ini
 npm-debug.log*
 logs/
 
-# Local object storage (dev uploads; prod uses R2)
+# Local object storage (dev uploads; prod uses R2).
+# Anchored to the exact folder — a bare "storage/" would also ignore the SOURCE package
+# server/src/main/java/com/ecoexpress/common/storage (gitignore matches the name anywhere).
 /server/storage/

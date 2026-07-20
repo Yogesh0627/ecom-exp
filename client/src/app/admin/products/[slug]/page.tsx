@@ -31,6 +31,12 @@ import {
   DialogTitle,
   DialogFooter,
   DialogTrigger,
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+  DatePicker,
 } from '@/components/ui';
 import { AdminPageHeader, DataState, ProductContentManager } from '@/components/admin';
 
@@ -143,17 +149,18 @@ export default function AdminProductDetailPage() {
                   <div className="space-y-3">
                     <div>
                       <Label className="text-xs">Type</Label>
-                      <select
-                        value={certType}
-                        onChange={(e) => setCertType(e.target.value as CertType)}
-                        className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                      >
-                        {CERT_TYPES.map((t) => (
-                          <option key={t} value={t}>
-                            {CERT_TYPE_LABEL[t]}
-                          </option>
-                        ))}
-                      </select>
+                      <Select value={certType} onValueChange={(v) => setCertType(v as CertType)}>
+                        <SelectTrigger className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
+                          <SelectValue placeholder="Select…" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {CERT_TYPES.map((t) => (
+                            <SelectItem key={t} value={t}>
+                              {CERT_TYPE_LABEL[t]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
@@ -166,11 +173,11 @@ export default function AdminProductDetailPage() {
                       </div>
                       <div>
                         <Label className="text-xs">Valid from</Label>
-                        <Input type="date" value={validFrom} onChange={(e) => setValidFrom(e.target.value)} className="mt-1" />
+                        <DatePicker value={validFrom} onChange={setValidFrom} className="mt-1" />
                       </div>
                       <div>
                         <Label className="text-xs">Valid until</Label>
-                        <Input type="date" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} className="mt-1" />
+                        <DatePicker value={validUntil} onChange={setValidUntil} className="mt-1" />
                       </div>
                     </div>
                     <div>

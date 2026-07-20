@@ -14,6 +14,11 @@ import {
   CardContent,
   Input,
   Badge,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   Table,
   TableHeader,
   TableBody,
@@ -133,19 +138,25 @@ export default function AdminProductsPage() {
                       </span>
                     </TableCell>
                     <TableCell>
-                      <select
+                      <Select
                         value={p.status}
                         disabled={update.isPending}
-                        onChange={(e) => onStatusChange(p.id, p.name, e.target.value)}
-                        aria-label={`Status for ${p.name}`}
-                        className="h-8 rounded-md border border-input bg-background px-2 text-xs capitalize"
+                        onValueChange={(v) => onStatusChange(p.id, p.name, v)}
                       >
-                        {PRODUCT_STATUSES.map((s) => (
-                          <option key={s} value={s}>
-                            {s.replace(/_/g, ' ').toLowerCase()}
-                          </option>
-                        ))}
-                      </select>
+                        <SelectTrigger
+                          aria-label={`Status for ${p.name}`}
+                          className="h-8 rounded-md border border-input bg-background px-2 text-xs capitalize"
+                        >
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PRODUCT_STATUSES.map((s) => (
+                            <SelectItem key={s} value={s} className="capitalize">
+                              {s.replace(/_/g, ' ').toLowerCase()}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </TableCell>
                     <TableCell className="text-muted-foreground">{p.categoryName ?? '—'}</TableCell>
                     <TableCell className="text-right tabular-nums">
