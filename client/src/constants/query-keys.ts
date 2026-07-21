@@ -17,6 +17,7 @@ export const QUERY_KEYS = {
   similarProducts: (slug: string) => ['similar', slug] as const,
   cart: ['cart'] as const,
   cartRecommendations: ['cart', 'recommendations'] as const,
+  stockAlerts: ['stock-alerts'] as const,
   addresses: ['addresses'] as const,
   orders: ['orders'] as const,
   order: (id: string) => ['order', id] as const,

@@ -70,6 +70,8 @@ public final class CatalogDtos {
             String currency,
             boolean isDefault,
             boolean isActive,
+            /** Units a customer can buy right now (on-hand minus reserved), summed across warehouses. */
+            int availableStock,
             NutritionResponse nutrition,
             List<ImageResponse> images) {}
 

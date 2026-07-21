@@ -16,6 +16,8 @@ import com.ecoexpress.catalog.dto.CatalogDtos.ProductContentResponse;
 import com.ecoexpress.catalog.dto.CatalogDtos.ProductResponse;
 import com.ecoexpress.catalog.dto.CatalogDtos.ProductSummaryResponse;
 import com.ecoexpress.catalog.dto.CatalogDtos.VariantResponse;
+import com.ecoexpress.inventory.service.InventoryService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -30,7 +32,10 @@ import java.util.List;
  * is easier to read and to debug than a generated class full of qualifiers.
  */
 @Component
+@RequiredArgsConstructor
 public class CatalogMapper {
+
+    private final InventoryService inventoryService;
 
     public CategoryResponse toCategory(Category c, boolean withChildren) {
         if (c == null) {
@@ -72,6 +77,7 @@ public class CatalogMapper {
                 v.getId(), v.getSku(), v.getBarcode(), v.getName(), v.getWeightGrams(),
                 v.getMrp(), v.getPrice(), v.discountPercent(), v.getCurrency(),
                 Boolean.TRUE.equals(v.getIsDefault()), Boolean.TRUE.equals(v.getIsActive()),
+                inventoryService.availableFor(v.getId()),
                 toNutrition(v.getNutritionFacts()),
                 v.getImages().stream().map(this::toImage).toList());
     }

@@ -1,6 +1,7 @@
 export { authApi } from './endpoints/auth.api';
 export { catalogApi, contentAdminApi } from './endpoints/catalog.api';
 export { cartApi } from './endpoints/cart.api';
+export { stockAlertApi } from './endpoints/stock-alert.api';
 export { orderApi } from './endpoints/order.api';
 export { contentApi } from './endpoints/content.api';
 export { aiApi } from './endpoints/ai.api';

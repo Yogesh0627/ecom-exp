@@ -32,5 +32,14 @@ export {
   SelectSeparator,
 } from './select';
 export { Popover, PopoverTrigger, PopoverContent } from './popover';
+export {
+  Sheet,
+  SheetTrigger,
+  SheetClose,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from './sheet';
 export { Calendar } from './calendar';
 export { DatePicker } from './date-picker';

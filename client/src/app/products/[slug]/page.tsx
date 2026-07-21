@@ -15,6 +15,9 @@ import {
   Lightbulb,
   Package,
   Info,
+  Zap,
+  Bell,
+  BellRing,
 } from 'lucide-react';
 import { ROUTES } from '@/constants';
 import { formatCurrency, dayjs } from '@/lib';
@@ -27,6 +30,8 @@ import {
   useReviews,
   useCartMutations,
   useAuth,
+  useStockAlerts,
+  useStockAlertMutations,
 } from '@/hooks';
 import { useToast } from '@/hooks/use-toast';
 import { Button, Card, CardContent, Badge, Separator, Skeleton, Breadcrumbs } from '@/components/ui';
@@ -89,6 +94,23 @@ export default function ProductDetailPage() {
       const msg =
         (e as { response?: { data?: { message?: string } } })?.response?.data?.message ??
         'Could not add to cart.';
+      toast({ variant: 'destructive', title: 'Out of stock', description: msg });
+    }
+  };
+
+  // Buy Now: add the item, then go straight to checkout instead of the cart.
+  const onBuyNow = async () => {
+    if (!isAuthenticated) {
+      router.push(ROUTES.login);
+      return;
+    }
+    try {
+      await addItem.mutateAsync({ variantId: variant.id, qty: 1 });
+      router.push(ROUTES.checkout);
+    } catch (e: unknown) {
+      const msg =
+        (e as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        'Could not proceed to checkout.';
       toast({ variant: 'destructive', title: 'Out of stock', description: msg });
     }
   };
@@ -186,10 +208,12 @@ export default function ProductDetailPage() {
             )}
           </div>
 
-          <Button size="lg" onClick={onAdd} disabled={addItem.isPending} className="w-full sm:w-auto">
-            <ShoppingCart className="mr-2 h-5 w-5" />
-            {addItem.isPending ? 'Adding…' : 'Add to cart'}
-          </Button>
+          <PurchaseActions
+            variant={variant}
+            busy={addItem.isPending}
+            onAdd={onAdd}
+            onBuyNow={onBuyNow}
+          />
 
           {certifications && certifications.length > 0 && (
             <CertificationsPanel certs={certifications} />
@@ -273,6 +297,99 @@ export default function ProductDetailPage() {
           <p className="text-sm text-muted-foreground">No reviews yet.</p>
         )}
       </section>
+    </div>
+  );
+}
+
+/**
+ * Purchase area: in stock → Add to cart + Buy Now (with a low-stock nudge); out of stock →
+ * a "notify me when it's back" subscription (fulfilled by the inventory restock hook).
+ */
+function PurchaseActions({
+  variant,
+  busy,
+  onAdd,
+  onBuyNow,
+}: {
+  variant: ProductVariant;
+  busy: boolean;
+  onAdd: () => void;
+  onBuyNow: () => void;
+}) {
+  const { isAuthenticated } = useAuth();
+  const router = useRouter();
+  const { toast } = useToast();
+  const { data: alertVariantIds } = useStockAlerts();
+  const { subscribe, unsubscribe } = useStockAlertMutations();
+
+  const inStock = variant.availableStock > 0;
+  const lowStock = inStock && variant.availableStock <= 5;
+  const subscribed = alertVariantIds?.includes(variant.id) ?? false;
+
+  const toggleAlert = () => {
+    if (!isAuthenticated) {
+      router.push(ROUTES.login);
+      return;
+    }
+    if (subscribed) {
+      unsubscribe.mutate(variant.id, {
+        onSuccess: () => toast({ title: 'Alert cancelled' }),
+      });
+    } else {
+      subscribe.mutate(variant.id, {
+        onSuccess: () =>
+          toast({
+            variant: 'success',
+            title: "We'll let you know",
+            description: "You'll get an email the moment it's back in stock.",
+          }),
+      });
+    }
+  };
+
+  if (!inStock) {
+    return (
+      <div className="space-y-3">
+        <Badge variant="destructive" className="gap-1">
+          <Info className="h-3 w-3" /> Out of stock
+        </Badge>
+        <Button
+          size="lg"
+          variant={subscribed ? 'outline' : 'default'}
+          onClick={toggleAlert}
+          disabled={subscribe.isPending || unsubscribe.isPending}
+          className="w-full sm:w-auto"
+        >
+          {subscribed ? (
+            <>
+              <BellRing className="mr-2 h-5 w-5" /> We&apos;ll notify you · cancel
+            </>
+          ) : (
+            <>
+              <Bell className="mr-2 h-5 w-5" /> Notify me when back in stock
+            </>
+          )}
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <Button size="lg" variant="outline" onClick={onAdd} disabled={busy} className="w-full sm:w-auto">
+          <ShoppingCart className="mr-2 h-5 w-5" />
+          {busy ? 'Adding…' : 'Add to cart'}
+        </Button>
+        <Button size="lg" onClick={onBuyNow} disabled={busy} className="w-full sm:w-auto">
+          <Zap className="mr-2 h-5 w-5" /> Buy now
+        </Button>
+      </div>
+      {lowStock && (
+        <p className="text-sm font-medium text-warning">
+          Only {variant.availableStock} left — order soon.
+        </p>
+      )}
     </div>
   );
 }

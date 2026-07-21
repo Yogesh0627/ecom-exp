@@ -41,6 +41,7 @@ public class InventoryService {
     private final InventoryBatchRepository batchRepository;
     private final StockTransactionRepository ledger;
     private final com.ecoexpress.inventory.repository.LowStockAlertRepository lowStockAlertRepository;
+    private final com.ecoexpress.engagement.service.StockAlertService stockAlertService;
 
     /**
      * Reserves stock for a cart/order. Does not move physical goods.
@@ -154,10 +155,12 @@ public class InventoryService {
                 .build();
         batchRepository.save(batch);
 
+        boolean wasOutOfStock = inv.available() <= 0;
         inv.setQtyOnHand(inv.getQtyOnHand() + qty);
         writeLedger(inv, batch, StockTransactionType.RECEIPT, qty, "PURCHASE_ORDER", supplierRef, null);
 
         evaluateLowStock(inv);
+        notifyIfBackInStock(variantId, wasOutOfStock, inv);
         log.info("Received {} of variant {} as lot {} (expires {})", qty, variantId, lotNo, expiryDate);
         return batch;
     }
@@ -214,12 +217,25 @@ public class InventoryService {
                     + inv.available() + " unreserved units are available.");
         }
 
+        boolean wasOutOfStock = inv.available() <= 0;
         inv.setQtyOnHand(inv.getQtyOnHand() + qtyDelta);
         writeLedger(inv, null, StockTransactionType.ADJUSTMENT, qtyDelta, "ADJUSTMENT",
                 adjustmentRef, note);
         evaluateLowStock(inv);
+        notifyIfBackInStock(variantId, wasOutOfStock, inv);
         log.info("Applied adjustment {} to variant {} (on-hand now {})",
                 qtyDelta, variantId, inv.getQtyOnHand());
+    }
+
+    /**
+     * Fires back-in-stock alerts when a variant crosses 0 -> positive available stock. Kept
+     * best-effort inside the caller's transaction; a notification failure never rolls back the
+     * stock movement (see {@code StockAlertService#notifyBackInStock}).
+     */
+    private void notifyIfBackInStock(UUID variantId, boolean wasOutOfStock, Inventory inv) {
+        if (wasOutOfStock && inv.available() > 0) {
+            stockAlertService.notifyBackInStock(variantId);
+        }
     }
 
     /**

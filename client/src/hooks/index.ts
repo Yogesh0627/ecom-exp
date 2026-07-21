@@ -13,6 +13,7 @@ export {
   useBanners,
 } from './use-catalog';
 export { useCart, useCartMutations } from './use-cart';
+export { useStockAlerts, useStockAlertMutations } from './use-stock-alerts';
 export {
   useAddresses,
   useCreateAddress,

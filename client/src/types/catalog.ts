@@ -48,6 +48,8 @@ export interface ProductVariant {
   currency: string;
   isDefault: boolean;
   isActive: boolean;
+  /** Units buyable right now (on-hand minus reserved, across warehouses). 0 = out of stock. */
+  availableStock: number;
   nutrition: NutritionFacts | null;
   images: ProductImage[];
 }

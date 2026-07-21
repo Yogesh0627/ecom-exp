@@ -21,13 +21,13 @@ export default function HomePage() {
       <section>
         <h2 className="mb-4 text-xl font-semibold">Shop by category</h2>
         {catsLoading ? (
-          <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-7">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-7">
             {Array.from({ length: 7 }).map((_, i) => (
               <Skeleton key={i} className="h-24 rounded-lg" />
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-7">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-7">
             {categories?.map((cat) => (
               <Link key={cat.id} href={ROUTES.category(cat.slug)}>
                 <Card className="transition-colors hover:border-primary hover:bg-accent">

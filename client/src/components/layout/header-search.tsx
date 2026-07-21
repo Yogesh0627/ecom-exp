@@ -15,7 +15,14 @@ import { Input } from '@/components/ui';
  * Search-as-you-type: the query is debounced, results appear in a dropdown without pressing Enter.
  * Enter (or "See all results") opens the full search page.
  */
-export function HeaderSearch({ className }: { className?: string }) {
+export function HeaderSearch({
+  className,
+  onNavigate,
+}: {
+  className?: string;
+  /** Called when the user navigates from a result — lets the mobile drawer close itself. */
+  onNavigate?: () => void;
+}) {
   const router = useRouter();
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
@@ -45,6 +52,7 @@ export function HeaderSearch({ className }: { className?: string }) {
 
   const goToSearch = (term: string) => {
     setOpen(false);
+    onNavigate?.();
     router.push(ROUTES.search(term.trim()));
   };
 
@@ -53,6 +61,7 @@ export function HeaderSearch({ className }: { className?: string }) {
       e.preventDefault();
       if (active >= 0 && results[active]) {
         setOpen(false);
+        onNavigate?.();
         router.push(ROUTES.product(results[active].slug));
       } else if (q.trim()) {
         goToSearch(q);
@@ -105,7 +114,10 @@ export function HeaderSearch({ className }: { className?: string }) {
                 <li key={p.id}>
                   <Link
                     href={ROUTES.product(p.slug)}
-                    onClick={() => setOpen(false)}
+                    onClick={() => {
+                      setOpen(false);
+                      onNavigate?.();
+                    }}
                     onMouseEnter={() => setActive(i)}
                     className={`flex items-center gap-3 px-3 py-2 text-sm ${
                       i === active ? 'bg-accent' : 'hover:bg-accent'

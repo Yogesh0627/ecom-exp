@@ -33,7 +33,7 @@ public class NotificationService {
             NotificationType.ORDER_PLACED, NotificationType.ORDER_SHIPPED,
             NotificationType.ORDER_DELIVERED, NotificationType.ORDER_CANCELLED,
             NotificationType.PAYMENT_FAILED, NotificationType.REFUND_PROCESSED,
-            NotificationType.PANTRY_EXPIRY);
+            NotificationType.PANTRY_EXPIRY, NotificationType.BACK_IN_STOCK);
 
     private final NotificationRepository notificationRepository;
     private final EmailSender emailSender;

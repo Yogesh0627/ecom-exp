@@ -131,8 +131,8 @@ export default function SmartFridgePage() {
                   </CardHeader>
                   <CardContent className="space-y-2">
                     {matched.map((item, i) => (
-                      <div key={i} className="flex items-center gap-3">
-                        <div className="flex-1">
+                      <div key={i} className="flex flex-wrap items-center gap-3">
+                        <div className="min-w-0 flex-1">
                           <p className="font-medium capitalize">{item.detectedName}</p>
                           <p className="text-xs text-muted-foreground">
                             {item.matchedProductName}

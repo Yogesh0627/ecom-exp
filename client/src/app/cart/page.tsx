@@ -83,58 +83,62 @@ export default function CartPage() {
           const unavailable = cart.unavailableVariantIds.includes(item.variantId);
           return (
             <Card key={item.id}>
-              <CardContent className="flex items-center gap-4 p-4">
-                <div className="h-16 w-16 shrink-0 overflow-hidden rounded-md bg-muted">
-                  {item.imageUrl && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={item.imageUrl} alt={item.productName} className="h-full w-full object-cover" />
-                  )}
+              <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-4">
+                <div className="flex min-w-0 flex-1 gap-4">
+                  <div className="h-16 w-16 shrink-0 overflow-hidden rounded-md bg-muted">
+                    {item.imageUrl && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={item.imageUrl} alt={item.productName} className="h-full w-full object-cover" />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <Link href={ROUTES.product(item.productSlug)} className="line-clamp-1 font-medium hover:underline">
+                      {item.productName}
+                    </Link>
+                    <p className="text-xs text-muted-foreground">{item.variantName}</p>
+                    <p className="mt-1 text-sm font-semibold">{formatCurrency(item.unitPrice)}</p>
+                    {item.priceChanged && (
+                      <Badge variant="warning" className="mt-1">Price changed since you added it</Badge>
+                    )}
+                    {unavailable && (
+                      <span className="mt-1 flex items-center gap-1 text-xs text-destructive">
+                        <AlertTriangle className="h-3 w-3" /> Only {item.availableStock} in stock
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <Link href={ROUTES.product(item.productSlug)} className="line-clamp-1 font-medium hover:underline">
-                    {item.productName}
-                  </Link>
-                  <p className="text-xs text-muted-foreground">{item.variantName}</p>
-                  <p className="mt-1 text-sm font-semibold">{formatCurrency(item.unitPrice)}</p>
-                  {item.priceChanged && (
-                    <Badge variant="warning" className="mt-1">Price changed since you added it</Badge>
-                  )}
-                  {unavailable && (
-                    <span className="mt-1 flex items-center gap-1 text-xs text-destructive">
-                      <AlertTriangle className="h-3 w-3" /> Only {item.availableStock} in stock
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center justify-between gap-3 sm:justify-end">
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => updateItem.mutate({ variantId: item.variantId, qty: item.qty - 1 })}
+                      disabled={updateItem.isPending}
+                    >
+                      <Minus className="h-3 w-3" />
+                    </Button>
+                    <span className="w-8 text-center text-sm font-medium">{item.qty}</span>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => updateItem.mutate({ variantId: item.variantId, qty: item.qty + 1 })}
+                      disabled={updateItem.isPending}
+                    >
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                  </div>
+                  <div className="w-20 text-right font-semibold">{formatCurrency(item.lineTotal)}</div>
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="icon"
-                    className="h-8 w-8"
-                    onClick={() => updateItem.mutate({ variantId: item.variantId, qty: item.qty - 1 })}
-                    disabled={updateItem.isPending}
+                    className="text-muted-foreground"
+                    onClick={() => removeItem.mutate(item.variantId)}
                   >
-                    <Minus className="h-3 w-3" />
-                  </Button>
-                  <span className="w-8 text-center text-sm font-medium">{item.qty}</span>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => updateItem.mutate({ variantId: item.variantId, qty: item.qty + 1 })}
-                    disabled={updateItem.isPending}
-                  >
-                    <Plus className="h-3 w-3" />
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
-                <div className="w-20 text-right font-semibold">{formatCurrency(item.lineTotal)}</div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-muted-foreground"
-                  onClick={() => removeItem.mutate(item.variantId)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
               </CardContent>
             </Card>
           );

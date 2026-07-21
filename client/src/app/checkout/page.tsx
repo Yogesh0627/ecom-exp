@@ -125,7 +125,7 @@ export default function CheckoutPage() {
                   selectedAddress === a.id ? 'border-primary bg-accent' : 'hover:border-primary'
                 }`}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="font-medium">{a.recipientName}</span>
                   <span className="text-muted-foreground">· {a.phone}</span>
                   {a.isDefault ? (

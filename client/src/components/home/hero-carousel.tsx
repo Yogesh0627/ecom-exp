@@ -89,7 +89,7 @@ export function HeroCarousel() {
         {SLIDES.map((slide, i) => (
           <div
             key={slide.title}
-            className={`absolute inset-0 bg-gradient-to-br ${slide.gradient} p-8 text-white transition-opacity duration-700 sm:p-12 ${
+            className={`absolute inset-0 bg-gradient-to-br ${slide.gradient} p-6 text-white transition-opacity duration-700 sm:p-12 ${
               i === index ? 'opacity-100' : 'pointer-events-none opacity-0'
             }`}
             aria-hidden={i !== index}
@@ -116,7 +116,7 @@ export function HeroCarousel() {
               <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-medium backdrop-blur">
                 <slide.icon className="h-3.5 w-3.5" /> {slide.eyebrow}
               </div>
-              <h1 className="text-3xl font-bold leading-tight sm:text-4xl">{slide.title}</h1>
+              <h1 className="text-2xl font-bold leading-tight sm:text-4xl">{slide.title}</h1>
               <p className="text-white/85">{slide.subtitle}</p>
               <Button asChild variant="secondary" size="lg">
                 <Link href={slide.href}>{slide.cta}</Link>
