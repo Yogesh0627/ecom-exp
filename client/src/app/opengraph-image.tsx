@@ -1,6 +1,10 @@
 import { ImageResponse } from 'next/og';
 import { APP_NAME, APP_TAGLINE } from '@/constants';
 
+// Edge runtime: @vercel/og loads its default font via fetch here, avoiding the Node
+// `fileURLToPath(Invalid URL)` crash that breaks `next build` prerendering on some setups.
+export const runtime = 'edge';
+
 // The default social share card (1200x630). Text/CSS only for maximum renderer compatibility.
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
