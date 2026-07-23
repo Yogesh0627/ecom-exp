@@ -1,9 +1,15 @@
-# Render blueprint — deploys the EcoExpress API + storefront. The database is EXTERNAL (create a
-# hosted Postgres, e.g. Neon, and set DB_URL/DB_USERNAME/DB_PASSWORD below). See DEPLOY.md.
+# Render blueprint — deploys the EcoExpress API ONLY.
+#
+# The frontend is NOT deployed here: the Next.js storefront lives on VERCEL
+# (https://ecoexpress-nu.vercel.app), which is a better fit for Next.js and avoids paying for a
+# second Render service. Frontend env vars (NEXT_PUBLIC_*) are configured in the Vercel dashboard,
+# not in this file. See DEPLOY.md.
+#
+# The database is EXTERNAL (create a hosted Postgres, e.g. Neon, and set
+# DB_URL/DB_USERNAME/DB_PASSWORD below).
 #
 # Env vars marked `sync: false` are secrets/URLs you fill in the Render dashboard after the first
-# deploy (some reference the other service's URL, which only exists once created). JWT_SECRET is
-# auto-generated. Non-secret values are set inline.
+# deploy. JWT_SECRET is auto-generated. Non-secret values are set inline.
 
 services:
   # ---------------- Backend API (Spring Boot) ----------------
@@ -36,16 +42,18 @@ services:
       - key: BOOTSTRAP_ADMIN_PASSWORD
         sync: false
 
-      # -- URLs that cross services (fill after both exist) --
-      - key: APP_BASE_URL         # https://ecoexpress-api.onrender.com
+      # -- URLs that cross services --
+      # These point at the VERCEL frontend. No trailing slash on CORS_ALLOWED_ORIGINS: the origin
+      # is matched exactly, and a trailing slash makes every browser request fail CORS.
+      - key: APP_BASE_URL         # https://ecoexpress-api.onrender.com  (this service)
         sync: false
-      - key: CORS_ALLOWED_ORIGINS # https://ecoexpress-web.onrender.com
+      - key: CORS_ALLOWED_ORIGINS # https://ecoexpress-nu.vercel.app
         sync: false
-      - key: OAUTH_SUCCESS_REDIRECT # https://ecoexpress-web.onrender.com/auth/callback
+      - key: OAUTH_SUCCESS_REDIRECT # https://ecoexpress-nu.vercel.app/auth/callback
         sync: false
-      - key: OAUTH_FAILURE_REDIRECT # https://ecoexpress-web.onrender.com/login
+      - key: OAUTH_FAILURE_REDIRECT # https://ecoexpress-nu.vercel.app/login
         sync: false
-      - key: EMAIL_VERIFY_URL     # https://ecoexpress-web.onrender.com/verify-email
+      - key: EMAIL_VERIFY_URL     # https://ecoexpress-nu.vercel.app/verify-email
         sync: false
 
       # -- Google OAuth --
@@ -106,31 +114,11 @@ services:
       - key: INVOICE_SELLER_PINCODE
         sync: false
 
-  # ---------------- Frontend storefront (Next.js) ----------------
-  - type: web
-    name: ecoexpress-web
-    runtime: docker
-    plan: free
-    region: singapore
-    dockerfilePath: client/Dockerfile
-    dockerContext: client
-    autoDeploy: true
-    envVars:
-      # NOTE: all NEXT_PUBLIC_* are baked in at BUILD time. After changing any of them you must
-      # redeploy the web service (Manual Deploy → Clear build cache & deploy) for it to take effect.
-      - key: NEXT_PUBLIC_API_BASE_URL   # https://ecoexpress-api.onrender.com/api/v1
-        sync: false
-      - key: NEXT_PUBLIC_SITE_URL       # https://ecoexpress-web.onrender.com  (canonical/OG/sitemap)
-        sync: false
-      # Payments are in Razorpay TEST mode → the checkout shows the test-card details so anyone can
-      # complete a transaction. Set to "false" once you switch to live Razorpay keys.
-      - key: NEXT_PUBLIC_PAYMENTS_TEST_MODE
-        value: "true"
-      # One-click "sign in as Admin/User" for recruiters. Set "false" to hide on a private deploy.
-      # If left on, the demo creds below must match the backend's BOOTSTRAP_ADMIN_* and demo user.
-      - key: NEXT_PUBLIC_ENABLE_DEMO_LOGIN
-        value: "true"
-      - key: NEXT_PUBLIC_DEMO_ADMIN_EMAIL      # must equal the API's BOOTSTRAP_ADMIN_EMAIL
-        sync: false
-      - key: NEXT_PUBLIC_DEMO_ADMIN_PASSWORD   # must equal the API's BOOTSTRAP_ADMIN_PASSWORD
-        sync: false
+# ---------------- Frontend (Next.js) — deployed on VERCEL, not Render ----------------
+# Nothing to define here. In the Vercel dashboard set:
+#   NEXT_PUBLIC_API_BASE_URL      https://ecoexpress-api.onrender.com/api/v1
+#   NEXT_PUBLIC_SITE_URL          https://ecoexpress-nu.vercel.app
+#   NEXT_PUBLIC_PAYMENTS_TEST_MODE  true
+#   NEXT_PUBLIC_ENABLE_DEMO_LOGIN   true
+#   NEXT_PUBLIC_DEMO_ADMIN_EMAIL / _PASSWORD   (must match this API's BOOTSTRAP_ADMIN_*)
+# NEXT_PUBLIC_* are baked in at BUILD time — after changing one, redeploy on Vercel.
